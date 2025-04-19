@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function ResetPasswordConfirmPage() {
+function ResetPasswordConfirmContent() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -223,5 +223,23 @@ export default function ResetPasswordConfirmPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// 메인 컴포넌트를 Suspense로 감싸서 내보냅니다
+export default function ResetPasswordConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+          <div className="flex justify-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          </div>
+          <p className="mt-4 text-center text-gray-600">페이지를 로딩 중입니다...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordConfirmContent />
+    </Suspense>
   )
 } 

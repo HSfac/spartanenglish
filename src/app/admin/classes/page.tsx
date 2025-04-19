@@ -15,7 +15,8 @@ const useAdminAuth = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { session } = await auth.getSession();
+        const { data } = await auth.getSession();
+        const session = data.session;
         setIsAuthenticated(!!session);
         
         if (!session) {

@@ -18,7 +18,8 @@ export default function AdminLoginPage() {
     const checkAuth = async () => {
       setLoading(true);
       try {
-        const { session } = await auth.getSession();
+        const { data } = await auth.getSession();
+        const session = data.session;
         if (session) {
           router.push('/admin/dashboard');
         }

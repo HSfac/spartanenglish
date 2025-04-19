@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaUsers, FaChalkboardTeacher, FaUserGraduate, FaComment, FaCalendarAlt, FaRegClock } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaBell, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaBell, FaSignOutAlt, FaBars, FaTimes, FaWonSign, FaChartLine } from 'react-icons/fa';
 import { supabase, db } from '@/lib/supabase';
 
 // 차트 라이브러리 추가

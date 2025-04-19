@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaArrowRight, FaArrowLeft, FaSpinner } from 'react-icons/fa';
 import { getRandomQuestions } from './testQuestions';
 import { calculateScore, evaluateLevel, generateRecommendation, analyzeWrongAnswers } from './util';
-import { createSupabaseClient } from '@/utils/supabase/client';
+import { createClient } from '@/utils/supabase/client';
 
 // 타입 정의
 type Question = {
@@ -32,7 +32,7 @@ type DiagnosisModalProps = {
 };
 
 export default function DiagnosisModal({ isOpen, onClose }: DiagnosisModalProps) {
-  const supabase = createSupabaseClient();
+  const supabase = createClient();
   
   // 상태 관리
   const [step, setStep] = useState<'start' | 'test' | 'result' | 'form'>('start');
