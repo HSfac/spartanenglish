@@ -2,14 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
 import { FaUsers, FaChalkboardTeacher, FaUserGraduate, FaComment, FaCalendarAlt, FaRegClock } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import useAdminAuth from '@/hooks/useAdminAuth';
 import { FaBell, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+import { supabase, db } from '@/lib/supabase';
 
 // 차트 라이브러리 추가
 import { 
@@ -32,7 +28,7 @@ const useAdminAuth = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data } = await auth.getSession();
+        const { data } = await supabase.auth.getSession();
         setIsAuthenticated(!!data.session);
         
         if (!data.session) {
@@ -249,17 +245,18 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchDashboardData();
   }, [isAuthenticated]);
 
   // 로그아웃 핸들러
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       router.push('/admin/login');
-    } catch (error) {
-      console.error('로그아웃 오류:', error);
+    } catch (err) {
+      console.error('로그아웃 오류:', err);
     }
   };
 

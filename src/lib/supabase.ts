@@ -1,11 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-// .env.local 파일에서 환경 변수 가져오기
+// Supabase 클라이언트 생성
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Supabase 클라이언트 생성
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
 
 // 사용자 인증 관련 함수들
 export const auth = {
@@ -33,7 +32,7 @@ export const auth = {
   // 세션 확인
   async getSession() {
     const { data, error } = await supabase.auth.getSession();
-    return { session: data.session, error };
+    return { data, error };
   }
 };
 
@@ -170,6 +169,15 @@ export const db = {
     return { data, error };
   },
 
+  // 시험 데이터 가져오기
+  async getExams() {
+    const { data, error } = await supabase
+      .from('exams')
+      .select('*')
+      .order('date', { ascending: true });
+    return { data, error };
+  },
+
   // 학생 시험 결과 추가
   async addTestResult(result: any) {
     const { data, error } = await supabase
@@ -180,12 +188,27 @@ export const db = {
   },
 
   // 학비 데이터 가져오기
-  async getPayments(studentId: number) {
+  async getPayments(studentId?: number) {
+    let query = supabase
+      .from('payments')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (studentId) {
+      query = query.eq('student_id', studentId);
+    }
+    
+    const { data, error } = await query;
+    return { data, error };
+  },
+  
+  // 미납 학비 데이터 가져오기
+  async getUnpaidPayments() {
     const { data, error } = await supabase
       .from('payments')
       .select('*')
-      .eq('student_id', studentId)
-      .order('date', { ascending: false });
+      .eq('status', '미납')
+      .order('due_date', { ascending: true });
     return { data, error };
   },
 
@@ -199,12 +222,17 @@ export const db = {
   },
 
   // 상담 기록 가져오기
-  async getConsultations(studentId: number) {
-    const { data, error } = await supabase
+  async getConsultations(studentId?: number) {
+    let query = supabase
       .from('consultations')
       .select('*')
-      .eq('student_id', studentId)
       .order('date', { ascending: false });
+    
+    if (studentId) {
+      query = query.eq('student_id', studentId);
+    }
+    
+    const { data, error } = await query;
     return { data, error };
   },
 
@@ -215,5 +243,49 @@ export const db = {
       .insert([consultation])
       .select();
     return { data, error };
+  },
+  
+  // 대시보드 통계 데이터 가져오기
+  async getDashboardStats() {
+    try {
+      // 학생 수 조회
+      const { data: students } = await supabase.from('students').select('id');
+      
+      // 수업 수 조회
+      const { data: classes } = await supabase.from('classes').select('id');
+      
+      // 대기 중인 상담 조회
+      const { data: pendingConsultations } = await supabase
+        .from('consultations')
+        .select('id')
+        .eq('status', '대기중');
+      
+      // 미납 학비 조회
+      const { data: unpaidPayments } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('status', '미납');
+      
+      const totalUnpaidAmount = unpaidPayments
+        ? unpaidPayments.reduce((sum, payment) => sum + payment.amount, 0)
+        : 0;
+      
+      return {
+        totalStudents: students?.length || 0,
+        totalClasses: classes?.length || 0,
+        pendingConsultations: pendingConsultations?.length || 0,
+        unpaidPayments: totalUnpaidAmount,
+        studentStatusData: []  // 필요시 추가 구현
+      };
+    } catch (error) {
+      console.error('대시보드 통계 데이터 가져오기 오류:', error);
+      return {
+        totalStudents: 0,
+        totalClasses: 0,
+        pendingConsultations: 0,
+        unpaidPayments: 0,
+        studentStatusData: []
+      };
+    }
   }
 }; 
