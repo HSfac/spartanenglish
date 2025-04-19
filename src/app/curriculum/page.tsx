@@ -7,6 +7,7 @@ import Image from 'next/image';
 import DiagnosisModal from '@/components/DiagnosisTest/DiagnosisModal';
 import { useState } from 'react';
 
+
 const CurriculumCard = ({ title, description, icon, features, isRecommended = false }: { 
   title: string; 
   description: string;
