@@ -84,18 +84,18 @@ export default function FeatureSection() {
   const features = [
     {
       icon: <FaUserTie />,
-      title: "원장 1:1 직강",
-      description: "학원 강사가 아닌 원장이 직접 수업합니다. 학생의 실력과 특성을 정확히 파악하고 맞춤형 수업을 진행합니다."
+      title: "원장 1:1 책임 교육",
+      description: "학원 강사가 아닌 원장이 직접 우리 아이를 가르칩니다. 아이의 실력과 특성을 정확히 파악하여 맞춤형 학습을 제공합니다."
     },
     {
       icon: <FaTrophy />,
-      title: "수능 맞춤 전략",
-      description: "수능 영어의 출제 경향과 특성을 분석하여 가장 효율적인 학습 전략을 수립합니다. 단순 암기가 아닌 이해 중심 학습을 지향합니다."
+      title: "자녀 맞춤 영어 전략",
+      description: "수능 영어의 출제 경향을 분석해 아이에게 가장 효율적인 학습 전략을 수립합니다. 암기식이 아닌 이해 중심 학습으로 실력이 쌓입니다."
     },
     {
       icon: <FaBookOpen />,
-      title: "실전 중심 수업자료",
-      description: "실제 수능 및 모의고사 기출문제를 기반으로 한 실전 중심 수업자료를 사용합니다. 시험에 직접 적용 가능한 실력을 키웁니다."
+      title: "성적 향상 집중 시스템",
+      description: "실제 시험 기출문제 기반의 학습과 체계적인 관리 시스템으로 아이의 영어 성적이 단계적으로 향상됩니다."
     }
   ];
 
@@ -113,13 +113,13 @@ export default function FeatureSection() {
           className="text-center mb-16"
         >
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-primary mb-4">
-            왜 <span className="text-accent relative">
+            우리 아이가 <span className="text-accent relative">
               Spartan
               <span className="absolute -inset-1 bg-accent/10 -z-10 blur-sm rounded-lg"></span>
-            </span>인가?
+            </span>을 선택해야 하는 이유
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            스파르탄 영어학원이 다른 곳과 차별화되는 3가지 핵심 포인트
+            스파르탄 영어학원이 제공하는 3가지 핵심 학습 시스템으로 자녀의 영어 실력이 달라집니다
           </p>
           
           {/* 진행 상태 인디케이터 */}
@@ -160,9 +160,9 @@ export default function FeatureSection() {
         >
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="mb-6 md:mb-0">
-              <h3 className="text-2xl font-bold text-primary mb-2">차별화된 학습 방법으로 결과를 증명합니다</h3>
+              <h3 className="text-2xl font-bold text-primary mb-2">우리 아이의 영어 성적, 결과로 증명합니다</h3>
               <p className="text-gray-600">
-                스파르탄 영어학원은 이러한 차별화된 특징을 바탕으로 학생들의 실력 향상과 목표 달성을 돕습니다.
+                스파르탄만의 차별화된 학습 시스템으로 아이의 영어 실력 향상과 목표 달성을 돕습니다.
               </p>
             </div>
             <div className="flex items-center">
@@ -171,7 +171,7 @@ export default function FeatureSection() {
               </div>
               <div className="text-gray-800">
                 <p className="font-bold">스파르탄 정신</p>
-                <p className="text-sm text-gray-500">효율성 · 집중력 · 결과 중심</p>
+                <p className="text-sm text-gray-500">체계적 관리 · 맞춤형 학습 · 실질적 성과</p>
               </div>
             </div>
           </div>

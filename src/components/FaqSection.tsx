@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { FaChevronDown, FaChevronUp, FaSearch, FaQuestionCircle } from 'react-icons/fa';
+import { FaChevronDown, FaSearch, FaQuestionCircle } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import DiagnosisModal from './DiagnosisTest/DiagnosisModal';
 
 type FaqItemProps = {
   question: string;
@@ -79,47 +80,38 @@ export default function FaqSection() {
     triggerOnce: true,
     threshold: 0.1
   });
+  const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
 
   const faqs = [
     {
-      question: '수업은 어떤 방식으로 진행되나요?',
-      answer: '1:1 또는 소규모 그룹(최대 3명)으로 진행됩니다. 모든 수업은 원장이 직접 진행하며, 학생의 수준과 목표에 맞춰 맞춤형 수업을 제공합니다.',
-      category: '수업방식'
+      question: '왜 원장이 직접 우리 아이를 가르치나요?',
+      answer: '아이의 영어 실력 향상을 위해서는 깊이 있는 관찰과 맞춤형 지도가 필요합니다. 원장이 직접 가르침으로써 아이의 학습 상황을 정확히 파악하고 최적의 학습 방향을 제시합니다. 자세한 교육 철학은 1:1 상담에서 더 자세히 말씀드리겠습니다.',
+      category: '교육 방식'
     },
     {
-      question: '수업 시간은 어떻게 되나요?',
-      answer: '평일 오후 1시부터 10시까지, 주말 오전 10시부터 오후 6시까지 운영됩니다. 학생의 일정에 맞춰 수업 시간을 조율할 수 있습니다.',
-      category: '시간/일정'
+      question: '우리 아이에게 맞는 학습 계획을 어떻게 세우나요?',
+      answer: '무료 진단 테스트와 1:1 상담을 통해 아이의 현재 영어 실력과 취약점을 정확히 파악합니다. 이를 바탕으로 아이의 특성과 목표에 맞는 맞춤형 학습 계획을 설계해 드립니다. 지금 바로 무료 진단을 신청하세요.',
+      category: '학습 계획'
     },
     {
-      question: '수업료는 얼마인가요?',
-      answer: '수업 방식(1:1 또는 그룹)과 수업 횟수에 따라 달라집니다. 자세한 내용은 상담을 통해 안내해 드립니다.',
-      category: '수강료'
-    },
-    {
-      question: '사용하는 교재는 무엇인가요?',
-      answer: '기본적으로 수능 기출문제와 자체 제작 교재를 사용합니다. 학생의 수준과 취약점에 맞춰 추가 교재가 제공될 수 있습니다.',
-      category: '수업방식'
-    },
-    {
-      question: '단기간에 영어 성적을 올릴 수 있나요?',
-      answer: '영어는 단기간에 극적인 향상을 보기 어려운 과목입니다. 하지만 학생의 취약점을 정확히 파악하고 맞춤형 전략을 제시함으로써 비교적 짧은 시간에 효율적인 성적 향상을 이끌어낼 수 있습니다.',
+      question: '단기간에 우리 아이 영어 성적이 향상될 수 있나요?',
+      answer: '영어는 꾸준한 학습이 필요한 과목이지만, 정확한 취약점 분석과 집중적인 맞춤 학습으로 단기간에도 눈에 띄는 향상이 가능합니다. 실제로 많은 학생들이 3개월 이내에 1-2등급 상승을 경험했습니다. 아이의 현재 상황에 대해 상담해 보세요.',
       category: '효과/결과'
     },
     {
-      question: '원장님이 모든 수업을 직접 진행하시나요?',
-      answer: '네, 모든 수업은 원장이 직접 진행합니다. 이는 수업의 질을 높이고 학생들의 성적 향상에 직접적인 책임을 지기 위함입니다.',
-      category: '강사/원장'
+      question: '수업료는 얼마인가요?',
+      answer: '학습 계획에 따라 맞춤형으로 구성됩니다. 아이의 현재 영어 수준, 목표 등급, 학습 기간 등을 고려하여 최적의 프로그램을 구성해 드립니다. 정확한 수업료는 무료 진단과 상담 후에 안내해 드립니다.',
+      category: '수강료'
     },
     {
-      question: '수업 결석 시 보강이 가능한가요?',
-      answer: '사전에 연락 주시면 일정을 조율하여 보강 수업을 진행해 드립니다. 다만, 당일 취소의 경우 보강이 어려울 수 있으니 가능한 미리 연락 부탁드립니다.',
-      category: '시간/일정'
+      question: '타 영어학원과 어떤 차이가 있나요?',
+      answer: '①원장의 직접 수업 ②학생별 맞춤형 학습 전략 ③철저한 관리 시스템이 핵심 차별점입니다. 특히 매주 학습 현황을 부모님께 직접 보고드리는 시스템을 운영하고 있어 아이의 학습 상황을 투명하게 확인하실 수 있습니다.',
+      category: '교육 방식'
     },
     {
-      question: '학습 상담은 어떻게 신청하나요?',
-      answer: '홈페이지 상담 신청 양식을 통해 신청하시거나, 전화로 직접 문의하실 수 있습니다. 상담은 무료로 진행됩니다.',
-      category: '기타'
+      question: '첫 상담은 어떻게 진행되나요?',
+      answer: '첫 상담은 무료로 진행되며, 약 30분 동안 아이의 현재 영어 실력과 학습 성향을 파악합니다. 원하시면 간단한 진단 테스트도 함께 진행할 수 있습니다. 부담 없이 신청해 보세요.',
+      category: '상담/등록'
     }
   ];
 
@@ -156,13 +148,13 @@ export default function FaqSection() {
           className="text-center mb-12"
         >
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-primary mb-4">
-            자주 묻는 <span className="text-accent relative">
-              질문들
+            <span className="text-accent relative">
+              학부모님들이
               <span className="absolute -inset-1 bg-accent/10 -z-10 blur-sm rounded-lg"></span>
-            </span>
+            </span> 자주 묻는 질문
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            학생과 학부모님들이 자주 물어보시는 질문들을 모았습니다.
+            우리 아이의 영어 실력 향상에 대한 궁금증을 해결해 드립니다
           </p>
         </motion.div>
         
@@ -239,14 +231,28 @@ export default function FaqSection() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="mt-8 text-center"
           >
-            <p className="text-gray-600 mb-4">더 궁금한 점이 있으신가요?</p>
-            <a 
-              href="/consult" 
-              className="inline-flex items-center text-primary font-medium border-2 border-primary px-6 py-3 rounded-lg hover:bg-primary hover:text-white transition-all duration-300"
-            >
-              1:1 원장님께 직접 문의하기
-            </a>
+            <p className="text-gray-600 mb-4">아이의 영어 학습에 대해 더 궁금한 점이 있으신가요?</p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <a 
+                href="/consult" 
+                className="inline-flex items-center justify-center bg-accent text-white font-medium px-6 py-3 rounded-lg hover:bg-accent/90 transition-all duration-300"
+              >
+                무료 상담 신청하기
+              </a>
+              <button
+                onClick={() => setIsTestModalOpen(true)}
+                className="inline-flex items-center justify-center bg-primary text-white font-medium px-6 py-3 rounded-lg hover:bg-primary/90 transition-all duration-300"
+              >
+                영어 진단 테스트 풀기
+              </button>
+            </div>
           </motion.div>
+          
+          {/* 진단 테스트 모달 */}
+          <DiagnosisModal 
+            isOpen={isTestModalOpen} 
+            onClose={() => setIsTestModalOpen(false)} 
+          />
         </motion.div>
       </div>
     </section>

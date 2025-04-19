@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import FixedBanner from '@/components/FixedBanner';
 
 export const metadata: Metadata = {
   title: '스파르탄 영어학원 - 원장이 직접 가르치는 1:1 맞춤 영어 수업',
@@ -27,6 +28,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <FixedBanner />
         </div>
       </body>
     </html>

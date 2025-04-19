@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { motion } from 'framer-motion';
 import { FaGraduationCap, FaUserGraduate, FaChartLine, FaUsers } from 'react-icons/fa';
 
 export default function InstructorSection() {
@@ -45,13 +45,13 @@ export default function InstructorSection() {
           className="text-center mb-16"
         >
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-primary mb-4">
-            저는 이 학생들의 점수를 <span className="text-accent relative">
-              책임졌습니다
+            <span className="text-accent relative">
+              우리 아이의 영어 성적
               <span className="absolute -inset-1 bg-accent/10 -z-10 blur-sm rounded-lg"></span>
-            </span>
+            </span>을 책임집니다
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            강사가 아닌 원장이 직접 가르칩니다. 수업의 질과 학생의 성적 향상을 직접 책임집니다.
+            일반 강사가 아닌 원장이 직접 자녀를 지도합니다. 아이의 성적 향상을 제가 직접 책임지겠습니다.
           </p>
         </motion.div>
         
@@ -71,8 +71,7 @@ export default function InstructorSection() {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">Spartan 영어학원 원장</h3>
                 <p className="text-gray-200 max-w-md">
-                  수능 영어 전문가로서 10년 동안 수많은 학생들의 성적 향상을 이끌어냈습니다.
-                  최신 학습법과 교육 트렌드를 연구하여 가장 효과적인 학습 방법을 제공합니다.
+                  학부모님께 드리는 약속: 10년간의 수능 영어 지도 경험으로 아이의 영어 성적 향상을 위해 끝까지 책임지고 지도하겠습니다.
                 </p>
               </div>
             </div>
@@ -84,11 +83,12 @@ export default function InstructorSection() {
             transition={{ duration: 0.7, delay: 0.3 }}
           >
             <h3 className="font-serif text-2xl font-bold text-primary mb-4">
-              10년 이상의 수능 영어 지도 경험
+              500명 이상의 학생들이 검증한 학습 시스템
             </h3>
             <p className="text-gray-700 mb-8">
-              저는 10년 이상 수능 영어를 지도하며, 매년 다수의 1등급 학생들을 배출해왔습니다. 
-              학생 개개인의 특성을 파악하고, 그에 맞는 맞춤형 수업을 진행하는 것이 저의 철학입니다.
+              지난 10년간 500명 이상의 학생들이 저의 지도 아래 목표 성적을 달성했습니다.
+              우리 아이의 영어 학습 성향과 특성을 정확히 파악하여 맞춤형 학습 계획을 설계하고
+              성적 향상까지 함께 하겠습니다.
             </p>
             
             <div className="grid grid-cols-2 gap-4 mb-8">
@@ -119,7 +119,7 @@ export default function InstructorSection() {
               className="bg-primary/5 p-6 rounded-xl border-l-4 border-primary"
             >
               <p className="text-gray-700 italic">
-                "제 수업은 대체되지 않습니다. <span className="font-medium">직접 가르치니까요.</span> 학생의 점수를 제 책임처럼 생각합니다."
+                "학부모님께 약속드립니다. <span className="font-medium">제가 직접 가르치고, 아이의 영어 성적을 책임지겠습니다.</span> 믿고 맡겨주신다면 반드시 결과로 보답하겠습니다."
               </p>
             </motion.div>
           </motion.div>

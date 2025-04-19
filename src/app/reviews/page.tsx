@@ -1,7 +1,7 @@
+import React from 'react';
 import { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
-import { FaQuoteLeft, FaStar } from 'react-icons/fa';
+import { FaQuoteLeft, FaStar, FaStarHalfAlt, FaRegStar, FaQuoteRight } from 'react-icons/fa';
 import CtaSection from '@/components/CtaSection';
 
 export const metadata: Metadata = {

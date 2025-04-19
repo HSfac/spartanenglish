@@ -2,8 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaUsers, FaChalkboardTeacher, FaCalendarAlt, FaChartLine, FaSignOutAlt, FaBars, FaTimes, FaBell } from 'react-icons/fa';
+import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { FaUsers, FaChalkboardTeacher, FaUserGraduate, FaComment, FaCalendarAlt, FaRegClock } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import useAdminAuth from '@/hooks/useAdminAuth';
+import { FaBell, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/firebase/config';
+
+// 차트 라이브러리 추가
+import { 
+  BarChart, Bar, 
+  PieChart, Pie, Cell, 
+  LineChart, Line, 
+  ResponsiveContainer, 
+  XAxis, YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend
+} from 'recharts';
 
 // 관리자 인증 상태 확인 커스텀 훅
 const useAdminAuth = () => {
@@ -12,13 +30,20 @@ const useAdminAuth = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
-      setIsAuthenticated(isLoggedIn);
-      setIsLoading(false);
-
-      if (!isLoggedIn) {
+    const checkAuth = async () => {
+      try {
+        const { data } = await auth.getSession();
+        setIsAuthenticated(!!data.session);
+        
+        if (!data.session) {
+          router.push('/admin/login');
+        }
+      } catch (err) {
+        console.error('인증 확인 오류:', err);
+        setIsAuthenticated(false);
         router.push('/admin/login');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -94,10 +119,90 @@ const UpcomingClass = ({ time, student, subject }: { time: string, student: stri
   </div>
 );
 
+// 미납 학비 알림 컴포넌트
+const TuitionAlert = ({ student, amount, dueDate }: { student: string, amount: string, dueDate: string }) => (
+  <div className="flex items-center justify-between py-3 border-b last:border-0">
+    <div>
+      <p className="font-medium">{student}</p>
+      <p className="text-sm text-gray-500">마감일: {dueDate}</p>
+    </div>
+    <div className="text-red-500 font-bold">{amount}</div>
+  </div>
+);
+
+// 다가오는 시험 일정 컴포넌트
+const UpcomingExam = ({ title, date, students }: { title: string, date: string, students: string }) => (
+  <div className="py-3 border-b last:border-0">
+    <div className="flex justify-between">
+      <p className="font-medium">{title}</p>
+      <p className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">{date}</p>
+    </div>
+    <p className="text-sm text-gray-500 mt-1">대상: {students}</p>
+  </div>
+);
+
+// 샘플 차트 데이터 - 실제로는 API에서 가져옴
+const attendanceData = [
+  { name: '수능 독해', 출석률: 92 },
+  { name: '영문법', 출석률: 88 },
+  { name: '토익', 출석률: 76 },
+  { name: '내신 대비', 출석률: 95 },
+  { name: '영어 회화', 출석률: 85 },
+];
+
+const monthlyRevenueData = [
+  { name: '1월', 수입: 3200000 },
+  { name: '2월', 수입: 3500000 },
+  { name: '3월', 수입: 3800000 },
+  { name: '4월', 수입: 4100000 },
+  { name: '5월', 수입: 4300000 },
+  { name: '6월', 수입: 4000000 },
+];
+
+const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];
+
+// 타입 정의
+interface DashboardData {
+  students: number;
+  classes: number;
+  pendingConsultations: number;
+  upcomingClasses: ClassInfo[];
+  recentConsultations: ConsultationInfo[];
+}
+
+interface ClassInfo {
+  id: string;
+  studentName: string;
+  date: Date;
+  time: string;
+  duration: number;
+  type: string;
+}
+
+interface ConsultationInfo {
+  id: string;
+  name: string;
+  phone: string;
+  date: Date;
+  status: string;
+  message: string;
+}
+
 export default function AdminDashboard() {
   const { isAuthenticated, isLoading } = useAdminAuth();
   const [currentTime, setCurrentTime] = useState(formatCurrentTime());
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>({
+    totalStudents: 0,
+    totalClasses: 0,
+    pendingConsultations: 0,
+    unpaidPayments: 0,
+    studentStatusData: [],
+    consultations: [],
+    exams: [],
+    payments: []
+  });
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // 타이머 설정
@@ -108,11 +213,54 @@ export default function AdminDashboard() {
 
     return () => clearInterval(timer);
   }, []);
+  
+  // 대시보드 데이터 가져오기
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        // 통계 데이터
+        const stats = await db.getDashboardStats();
+        
+        // 최근 상담 요청
+        const { data: consultations } = await db.getConsultations();
+        
+        // 다가오는 시험
+        const { data: exams } = await db.getExams();
+        
+        // 미납 학비
+        const { data: payments } = await db.getUnpaidPayments();
+        
+        setDashboardData({
+          totalStudents: stats.totalStudents,
+          totalClasses: stats.totalClasses,
+          pendingConsultations: stats.pendingConsultations,
+          unpaidPayments: stats.unpaidPayments,
+          studentStatusData: stats.studentStatusData,
+          consultations: consultations?.slice(0, 4) || [],
+          exams: exams?.slice(0, 4) || [],
+          payments: payments?.slice(0, 4) || []
+        });
+      } catch (error) {
+        console.error('대시보드 데이터 가져오기 오류:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [isAuthenticated]);
 
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    localStorage.removeItem('adminLoggedIn');
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+    }
   };
 
   // 사이드바 토글
@@ -121,7 +269,7 @@ export default function AdminDashboard() {
   };
 
   // 로딩 상태 표시
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -136,6 +284,14 @@ export default function AdminDashboard() {
   if (!isAuthenticated && !isLoading) {
     return null;
   }
+
+  // 성장률 계산 (임시 데이터, 실제로는 DB에서 가져옴)
+  const growthRates = {
+    students: '+5%',
+    classes: '+2%',
+    consultations: '+8%',
+    revenue: '+4.6%'
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -157,25 +313,25 @@ export default function AdminDashboard() {
             <div className="p-4">
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-white/10 text-white">
+                  <a href="/admin/dashboard" className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-white/10 text-white">
                     <FaChartLine />
                     <span>대시보드</span>
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
+                  <a href="/admin/students" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
                     <FaUsers />
                     <span>학생 관리</span>
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
+                  <a href="/admin/classes" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
                     <FaCalendarAlt />
-                    <span>수업 일정</span>
+                    <span>수업 관리</span>
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
+                  <a href="/admin/resources" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white/10 text-white/80 transition-colors">
                     <FaChalkboardTeacher />
                     <span>교육 자료</span>
                   </a>
@@ -215,7 +371,9 @@ export default function AdminDashboard() {
             
             <div className="relative">
               <FaBell className="text-xl text-gray-600 cursor-pointer hover:text-primary transition-colors" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {dashboardData.pendingConsultations || 0}
+              </span>
             </div>
             
             <div className="flex items-center space-x-2">
@@ -226,7 +384,7 @@ export default function AdminDashboard() {
         </header>
         
         {/* 대시보드 콘텐츠 */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 overflow-auto">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-800">대시보드</h1>
             <p className="text-gray-600">학원 현황과 통계를 한눈에 확인하세요.</p>
@@ -237,85 +395,188 @@ export default function AdminDashboard() {
             <StatsCard 
               icon={FaUsers} 
               title="총 학생 수" 
-              value="87명" 
-              trend="+5%" 
+              value={`${dashboardData.totalStudents}명`} 
+              trend={growthRates.students} 
               color="#4F46E5" 
             />
             <StatsCard 
               icon={FaChalkboardTeacher} 
-              title="이번 주 수업" 
-              value="32회" 
-              trend="+2%" 
+              title="진행 중인 수업" 
+              value={`${dashboardData.totalClasses}개`} 
+              trend={growthRates.classes} 
               color="#0EA5E9" 
             />
             <StatsCard 
               icon={FaCalendarAlt} 
               title="상담 신청" 
-              value="12건" 
-              trend="+8%" 
+              value={`${dashboardData.pendingConsultations}건`} 
+              trend={growthRates.consultations} 
               color="#10B981" 
             />
             <StatsCard 
-              icon={FaChartLine} 
-              title="월별 성장률" 
-              value="12.5%" 
-              trend="-3%" 
+              icon={FaWonSign} 
+              title="미납 학비" 
+              value={`${dashboardData.unpaidPayments}건`} 
+              trend={growthRates.revenue} 
               color="#F59E0B" 
             />
           </div>
           
-          {/* 추가 정보 섹션 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 학생 현황 및 차트 섹션 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* 실시간 학생 현황 */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">실시간 학생 현황</h2>
+              <div className="flex">
+                <div className="w-1/2">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={dashboardData.studentStatusData || []}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {(dashboardData.studentStatusData || []).map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-1/2 flex flex-col justify-center">
+                  {(dashboardData.studentStatusData || []).map((status: any, index: number) => (
+                    <div key={index} className="flex items-center mb-4">
+                      <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <div>
+                        <p className="text-sm font-medium">{status.name}</p>
+                        <div className="flex items-baseline">
+                          <span className="text-2xl font-bold mr-1">{status.value}</span>
+                          <span className="text-sm text-gray-500">명</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* 수업별 출석률 그래프 */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">수업별 출석률</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={attendanceData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis unit="%" domain={[0, 100]} />
+                  <Tooltip formatter={(value) => [`${value}%`, '출석률']} />
+                  <Bar dataKey="출석률" fill="#4F46E5" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* 월별 매출 통계 */}
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">월별 매출 통계</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart
+                data={monthlyRevenueData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis 
+                  tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} 
+                />
+                <Tooltip 
+                  formatter={(value) => [
+                    new Intl.NumberFormat('ko-KR', { 
+                      style: 'currency', 
+                      currency: 'KRW',
+                      maximumFractionDigits: 0 
+                    }).format(value as number), 
+                    '매출'
+                  ]} 
+                />
+                <Legend />
+                <Line type="monotone" dataKey="수입" stroke="#4F46E5" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* 추가 정보 섹션 - 3열 그리드 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* 최근 상담 요청 */}
-            <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">최근 상담 요청</h2>
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">최근 문의 및 상담 요청</h2>
               <div className="space-y-1">
-                <RecentConsultation name="김영희 학부모" date="2024-04-19 11:30" status="대기중" />
-                <RecentConsultation name="이철수 학부모" date="2024-04-18 15:45" status="상담완료" />
-                <RecentConsultation name="박민지 학부모" date="2024-04-18 09:20" status="상담완료" />
-                <RecentConsultation name="정재훈 학부모" date="2024-04-17 14:00" status="취소" />
+                {dashboardData.consultations.length > 0 ? (
+                  dashboardData.consultations.map((consultation: any, index: number) => (
+                    <RecentConsultation 
+                      key={index}
+                      name={consultation.name}
+                      date={new Date(consultation.date).toLocaleString('ko-KR')}
+                      status={consultation.status as any}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm py-3">최근 상담 요청이 없습니다.</p>
+                )}
               </div>
               <a href="#" className="block text-center mt-4 text-sm text-primary font-medium hover:underline">
                 모든 상담 요청 보기
               </a>
             </div>
             
-            {/* 오늘의 수업 일정 */}
-            <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">오늘의 수업 일정</h2>
+            {/* 다가오는 시험 일정 */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">다가오는 시험 일정</h2>
               <div className="space-y-1">
-                <UpcomingClass time="14:00" student="김민준 학생" subject="수능 독해 심화" />
-                <UpcomingClass time="16:00" student="박서연 학생" subject="내신 대비 영문법" />
-                <UpcomingClass time="18:30" student="이지훈 학생" subject="수능 영어 기출 분석" />
-                <UpcomingClass time="20:00" student="최예린 학생" subject="토익 실전 대비" />
+                {dashboardData.exams.length > 0 ? (
+                  dashboardData.exams.map((exam: any, index: number) => (
+                    <UpcomingExam
+                      key={index}
+                      title={exam.title}
+                      date={new Date(exam.date).toLocaleDateString('ko-KR')}
+                      students={exam.target_students}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm py-3">다가오는 시험 일정이 없습니다.</p>
+                )}
               </div>
               <a href="#" className="block text-center mt-4 text-sm text-primary font-medium hover:underline">
-                모든 일정 보기
+                모든 시험 일정 보기
               </a>
             </div>
             
-            {/* 최근 게시글 */}
-            <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-1">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">최근 공지사항</h2>
-              <div className="space-y-3">
-                <div className="border-b pb-3">
-                  <h3 className="font-medium">5월 연휴 휴원 안내</h3>
-                  <p className="text-sm text-gray-500 mt-1">어린이날과 석가탄신일 연휴 기간 휴원 안내입니다.</p>
-                  <p className="text-xs text-gray-400 mt-2">2024-04-18</p>
-                </div>
-                <div className="border-b pb-3">
-                  <h3 className="font-medium">중간고사 특강 안내</h3>
-                  <p className="text-sm text-gray-500 mt-1">5월 중간고사 대비 특강 일정이 확정되었습니다.</p>
-                  <p className="text-xs text-gray-400 mt-2">2024-04-15</p>
-                </div>
-                <div className="border-b pb-3">
-                  <h3 className="font-medium">학부모 상담주간 운영</h3>
-                  <p className="text-sm text-gray-500 mt-1">4월 마지막 주 학부모 상담주간을 운영합니다.</p>
-                  <p className="text-xs text-gray-400 mt-2">2024-04-10</p>
-                </div>
+            {/* 미납 학비 알림 */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">미납 학비 알림</h2>
+              <div className="space-y-1">
+                {dashboardData.payments.length > 0 ? (
+                  dashboardData.payments.map((payment: any, index: number) => (
+                    <TuitionAlert
+                      key={index}
+                      student={payment.students.name}
+                      amount={new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(payment.amount)}
+                      dueDate={new Date(payment.dueDate).toLocaleDateString('ko-KR')}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm py-3">미납 학비가 없습니다.</p>
+                )}
               </div>
               <a href="#" className="block text-center mt-4 text-sm text-primary font-medium hover:underline">
-                모든 공지사항 보기
+                모든 미납 학비 보기
               </a>
             </div>
           </div>

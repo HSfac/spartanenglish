@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import FireEffect from './FireEffect';
+import DiagnosisButton from './DiagnosisTest/DiagnosisButton';
+import DiagnosisModal from './DiagnosisTest/DiagnosisModal';
 
 export default function HeroSection() {
   const [showSpartan, setShowSpartan] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   
   useEffect(() => {
     // 애니메이션 효과를 위한 타이머
@@ -57,33 +59,52 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="animate-fadeIn">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              원장이 직접 가르치는 영어,<br />
+              우리 아이 영어,<br />
               <span className={`text-accent relative ${showSpartan ? 'animate-pulse' : ''}`}>
-                Spartan
+                원장이 직접
                 <span className="absolute -inset-1 bg-accent opacity-20 blur-sm rounded-lg"></span>
-              </span>에서 시작됩니다
+              </span> 책임집니다
             </h1>
             <p className="text-lg md:text-xl mb-8 text-gray-200">
-              학원 강사가 아닌, <strong>원장 선생님이 직접</strong> 책임집니다.<br />
+              학원 강사가 아닌, <strong>원장 선생님이 직접</strong> 아이의 영어 실력을 책임집니다.<br />
               수능 영어, <strong className="text-accent relative">
-                결과로 증명
+                믿을 수 있는 결과로 증명
                 <span className="absolute -inset-1 bg-accent opacity-10 blur-sm rounded-lg"></span>
               </strong>합니다.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Link
                 href="/consult"
                 className="inline-block bg-accent text-white font-medium px-8 py-3 rounded-md text-lg hover:bg-opacity-90 transition-colors hover:scale-105 transform duration-200 shadow-lg"
               >
-                📞 지금 원장 상담 신청하기
+                📞 무료 상담 신청하기
               </Link>
+              <button
+                onClick={() => setIsTestModalOpen(true)}
+                className="inline-block bg-primary text-white font-medium px-8 py-3 rounded-md text-lg hover:bg-opacity-90 transition-colors border-2 border-primary"
+              >
+                📝 영어 진단 테스트 풀어보기
+              </button>
+            </div>
+            
+            {/* 커리큘럼 안내 버튼 */}
+            <div className="mt-2">
               <Link
                 href="/curriculum"
-                className="inline-block bg-transparent border-2 border-white text-white font-medium px-8 py-3 rounded-md text-lg hover:bg-white hover:text-primary transition-colors"
+                className="inline-flex items-center text-white font-medium hover:underline"
               >
-                커리큘럼 살펴보기
+                <span>우리 아이 맞춤 커리큘럼 확인하기</span>
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
               </Link>
             </div>
+            
+            {/* 진단 테스트 모달 */}
+            <DiagnosisModal 
+              isOpen={isTestModalOpen} 
+              onClose={() => setIsTestModalOpen(false)} 
+            />
           </div>
           <div className="relative h-80 md:h-96 rounded-xl flex items-center justify-center overflow-hidden group perspective">
             {/* 배경 효과 */}

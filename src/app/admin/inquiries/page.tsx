@@ -4,90 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaUsers, FaChalkboardTeacher, FaCalendarAlt, FaChartLine, FaSignOutAlt, FaBars, FaTimes, FaSearch, FaFilter, FaRegEnvelope } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// 샘플 문의 데이터
-const initialInquiries = [
-  { 
-    id: 1, 
-    name: '김영희', 
-    email: 'kim@example.com', 
-    phone: '010-1234-5678', 
-    date: '2024-04-19', 
-    status: '미확인', 
-    subject: '수업 일정 문의', 
-    message: '안녕하세요, 5월 중간고사 대비 특강 일정에 대해 문의드립니다. 고등학교 2학년 영어 내신 대비를 위한 특별 프로그램이 있는지 알고 싶습니다.' 
-  },
-  { 
-    id: 2, 
-    name: '이철수', 
-    email: 'lee@example.com', 
-    phone: '010-2345-6789', 
-    date: '2024-04-18', 
-    status: '확인완료', 
-    subject: '수강료 문의', 
-    message: '안녕하세요, 고3 수능 대비반의 월 수강료와 교재비에 대해 알고 싶습니다. 또한 형제 할인이 있는지도 궁금합니다.' 
-  },
-  { 
-    id: 3, 
-    name: '박지훈', 
-    email: 'park@example.com', 
-    phone: '010-3456-7890', 
-    date: '2024-04-17', 
-    status: '답변완료', 
-    subject: '체험수업 신청', 
-    message: '고1 학생인데 체험수업을 받아보고 싶습니다. 어떤 절차로 신청하면 되나요? 가능한 날짜와 시간대도 알려주시면 감사하겠습니다.' 
-  },
-  { 
-    id: 4, 
-    name: '최민서', 
-    email: 'choi@example.com', 
-    phone: '010-4567-8901', 
-    date: '2024-04-16', 
-    status: '미확인', 
-    subject: '교재 관련 문의', 
-    message: '현재 사용하고 있는 교재의 추가 구매가 필요한데, 학원에서 직접 구매가 가능한지 아니면 외부에서 구매해야 하는지 문의드립니다.' 
-  },
-  { 
-    id: 5, 
-    name: '정수연', 
-    email: 'jung@example.com', 
-    phone: '010-5678-9012', 
-    date: '2024-04-15', 
-    status: '확인완료', 
-    subject: '교사 이력 문의', 
-    message: '담당 선생님들의 학력과 경력에 대해 좀 더 자세히 알고 싶습니다. 특히 고3 수능반 지도 선생님의 이력이 궁금합니다.' 
-  },
-  { 
-    id: 6, 
-    name: '강도현', 
-    email: 'kang@example.com', 
-    phone: '010-6789-0123', 
-    date: '2024-04-14', 
-    status: '답변완료', 
-    subject: '수업 시간 조정 요청', 
-    message: '현재 수강 중인 수업의 시간을 조정하고 싶습니다. 학교 일정이 변경되어 한 시간 정도 늦춰질 수 있을지 문의드립니다.' 
-  },
-  { 
-    id: 7, 
-    name: '윤서연', 
-    email: 'yoon@example.com', 
-    phone: '010-7890-1234', 
-    date: '2024-04-13', 
-    status: '미확인', 
-    subject: '온라인 수업 문의', 
-    message: '코로나로 인해 온라인 수업이 가능한지 궁금합니다. 가능하다면 어떤 플랫폼을 사용하고 수업 방식은 어떻게 진행되나요?' 
-  },
-  { 
-    id: 8, 
-    name: '임재현', 
-    email: 'lim@example.com', 
-    phone: '010-8901-2345', 
-    date: '2024-04-12', 
-    status: '확인완료', 
-    subject: '환불 규정 문의', 
-    message: '개인 사정으로 인해 수업을 계속 들을 수 없게 되었습니다. 환불 규정에 대해 자세히 알려주시면 감사하겠습니다.' 
-  }
-];
+import { supabase } from '@/utils/supabase';
+import { Inquiry } from '@/app/api/inquiries';
 
 // 관리자 인증 상태 확인 커스텀 훅
 const useAdminAuth = () => {
@@ -114,12 +32,73 @@ const useAdminAuth = () => {
 
 export default function InquiriesPage() {
   const { isAuthenticated, isLoading } = useAdminAuth();
-  const [inquiries, setInquiries] = useState(initialInquiries);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // 문의 데이터 불러오기
+  useEffect(() => {
+    async function fetchInquiries() {
+      if (!isAuthenticated) return;
+      
+      try {
+        setIsLoadingData(true);
+        const { data, error } = await supabase
+          .from('inquiries')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setInquiries(data || []);
+      } catch (err) {
+        console.error('문의 데이터 조회 오류:', err);
+        setError('문의 데이터를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoadingData(false);
+      }
+    }
+
+    fetchInquiries();
+  }, [isAuthenticated]);
+
+  // 실시간 데이터 업데이트 구독
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const subscription = supabase
+      .channel('inquiries_channel')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'inquiries' }, 
+        (payload) => {
+          // 데이터 변경 시 처리
+          if (payload.eventType === 'INSERT') {
+            setInquiries(prev => [payload.new as Inquiry, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setInquiries(prev => 
+              prev.map(item => item.id === payload.new.id ? payload.new as Inquiry : item)
+            );
+            if (selectedInquiry?.id === payload.new.id) {
+              setSelectedInquiry(payload.new as Inquiry);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setInquiries(prev => prev.filter(item => item.id !== payload.old.id));
+            if (selectedInquiry?.id === payload.old.id) {
+              setSelectedInquiry(null);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isAuthenticated, selectedInquiry]);
 
   // 로그아웃 핸들러
   const handleLogout = () => {
@@ -133,31 +112,51 @@ export default function InquiriesPage() {
   };
 
   // 문의 상태 변경 핸들러
-  const handleStatusChange = (id: number, newStatus: string) => {
-    setInquiries(prev => 
-      prev.map(inquiry => 
-        inquiry.id === id ? { ...inquiry, status: newStatus } : inquiry
-      )
-    );
-    
-    if (selectedInquiry && selectedInquiry.id === id) {
-      setSelectedInquiry(prev => ({ ...prev, status: newStatus }));
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('inquiries')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // 로컬 상태 업데이트 (실시간 구독으로 처리될 수도 있지만, 즉각적인 UI 반응을 위해 추가)
+      setInquiries(prev => 
+        prev.map(inquiry => 
+          inquiry.id === id ? { ...inquiry, status: newStatus } : inquiry
+        )
+      );
+      
+      if (selectedInquiry && selectedInquiry.id === id) {
+        setSelectedInquiry(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err) {
+      console.error('상태 변경 오류:', err);
+      alert('상태를 변경하는 중 오류가 발생했습니다.');
     }
   };
 
   // 필터링된 문의 목록
   const filteredInquiries = inquiries
     .filter(inquiry => 
-      (inquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       inquiry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       inquiry.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       inquiry.message.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (inquiry.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       inquiry.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       inquiry.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       inquiry.message?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || inquiry.status === statusFilter)
-    )
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    );
 
   // 상세 모달
-  const InquiryDetailModal = ({ inquiry, onClose }: { inquiry: any, onClose: () => void }) => {
+  const InquiryDetailModal = ({ inquiry, onClose }: { inquiry: Inquiry, onClose: () => void }) => {
+    const [isUpdating, setIsUpdating] = useState(false);
+    
+    const handleChangeStatus = async (newStatus: string) => {
+      setIsUpdating(true);
+      await handleStatusChange(inquiry.id, newStatus);
+      setIsUpdating(false);
+    };
+    
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <motion.div
@@ -178,7 +177,7 @@ export default function InquiriesPage() {
           
           <div className="border-b pb-4 mb-4">
             <div className="flex flex-wrap gap-2 justify-between mb-2">
-              <span className="text-sm text-gray-500">접수일: {inquiry.date}</span>
+              <span className="text-sm text-gray-500">접수일: {new Date(inquiry.created_at || inquiry.date).toLocaleDateString('ko-KR')}</span>
               <span className={`px-2 py-1 text-xs rounded-full ${
                 inquiry.status === '미확인' ? 'bg-yellow-100 text-yellow-800' :
                 inquiry.status === '확인완료' ? 'bg-blue-100 text-blue-800' :
@@ -217,8 +216,10 @@ export default function InquiriesPage() {
               <p className="text-sm text-gray-500 mb-2">상태 변경</p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleStatusChange(inquiry.id, '미확인')}
+                  disabled={isUpdating}
+                  onClick={() => handleChangeStatus('미확인')}
                   className={`px-3 py-1 text-xs rounded ${
+                    isUpdating ? 'opacity-50 cursor-not-allowed' : 
                     inquiry.status === '미확인' 
                       ? 'bg-yellow-500 text-white' 
                       : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
@@ -227,8 +228,10 @@ export default function InquiriesPage() {
                   미확인
                 </button>
                 <button
-                  onClick={() => handleStatusChange(inquiry.id, '확인완료')}
+                  disabled={isUpdating}
+                  onClick={() => handleChangeStatus('확인완료')}
                   className={`px-3 py-1 text-xs rounded ${
+                    isUpdating ? 'opacity-50 cursor-not-allowed' : 
                     inquiry.status === '확인완료' 
                       ? 'bg-blue-500 text-white' 
                       : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
@@ -237,8 +240,10 @@ export default function InquiriesPage() {
                   확인완료
                 </button>
                 <button
-                  onClick={() => handleStatusChange(inquiry.id, '답변완료')}
+                  disabled={isUpdating}
+                  onClick={() => handleChangeStatus('답변완료')}
                   className={`px-3 py-1 text-xs rounded ${
+                    isUpdating ? 'opacity-50 cursor-not-allowed' : 
                     inquiry.status === '답변완료' 
                       ? 'bg-green-500 text-white' 
                       : 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -267,7 +272,7 @@ export default function InquiriesPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="mt-4 text-gray-700">로딩 중...</p>
+          <p className="mt-4 text-gray-700">로그인 확인 중...</p>
         </div>
       </div>
     );
@@ -371,6 +376,12 @@ export default function InquiriesPage() {
               <h1 className="text-2xl font-bold text-gray-800">문의 관리</h1>
               <p className="text-gray-600">총 {filteredInquiries.length}건의 문의가 있습니다.</p>
             </div>
+            
+            {error && (
+              <div className="bg-red-100 text-red-700 p-2 rounded">
+                {error}
+              </div>
+            )}
           </div>
           
           {/* 검색 및 필터 */}
@@ -407,71 +418,82 @@ export default function InquiriesPage() {
           
           {/* 문의 목록 */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      날짜
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      이름
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      제목
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      상태
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      이메일
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      연락처
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredInquiries.map((inquiry) => (
-                    <tr 
-                      key={inquiry.id} 
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedInquiry(inquiry)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {inquiry.date}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {inquiry.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[200px]">
-                        {inquiry.subject}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          inquiry.status === '미확인' ? 'bg-yellow-100 text-yellow-800' :
-                          inquiry.status === '확인완료' ? 'bg-blue-100 text-blue-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {inquiry.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {inquiry.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {inquiry.phone}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {filteredInquiries.length === 0 && (
-              <div className="py-8 text-center text-gray-500">
-                조건에 맞는 문의가 없습니다.
+            {isLoadingData ? (
+              <div className="p-10 flex justify-center items-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mr-2"></div>
+                <p>데이터 로딩 중...</p>
               </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          날짜
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          이름
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          제목
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          상태
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          이메일
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          연락처
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredInquiries.map((inquiry) => (
+                        <tr 
+                          key={inquiry.id} 
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => setSelectedInquiry(inquiry)}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(inquiry.created_at || inquiry.date).toLocaleDateString('ko-KR')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {inquiry.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[200px]">
+                            {inquiry.subject}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              inquiry.status === '미확인' ? 'bg-yellow-100 text-yellow-800' :
+                              inquiry.status === '확인완료' ? 'bg-blue-100 text-blue-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {inquiry.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {inquiry.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {inquiry.phone}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {filteredInquiries.length === 0 && (
+                  <div className="py-8 text-center text-gray-500">
+                    {searchTerm || statusFilter !== 'all' 
+                      ? '조건에 맞는 문의가 없습니다.' 
+                      : '문의 내역이 없습니다.'}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

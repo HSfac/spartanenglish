@@ -4,20 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaUsers, FaChalkboardTeacher, FaCalendarAlt, FaChartLine, FaSignOutAlt, FaBars, FaTimes, FaSearch, FaEdit, FaTrash, FaPlus, FaSort, FaSortUp, FaSortDown, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// 샘플 학생 데이터
-const initialStudents = [
-  { id: 1, name: '김민준', grade: '고3', level: '상', enrollDate: '2023-09-01', status: '재원중', parentContact: '010-1234-5678' },
-  { id: 2, name: '이서연', grade: '고2', level: '중상', enrollDate: '2023-11-15', status: '재원중', parentContact: '010-2345-6789' },
-  { id: 3, name: '박지호', grade: '고3', level: '중', enrollDate: '2024-01-05', status: '재원중', parentContact: '010-3456-7890' },
-  { id: 4, name: '최예린', grade: '고1', level: '중하', enrollDate: '2023-08-20', status: '재원중', parentContact: '010-4567-8901' },
-  { id: 5, name: '정우진', grade: '고3', level: '상', enrollDate: '2022-12-10', status: '재원중', parentContact: '010-5678-9012' },
-  { id: 6, name: '강하은', grade: '고2', level: '중', enrollDate: '2023-07-22', status: '휴원중', parentContact: '010-6789-0123' },
-  { id: 7, name: '윤도현', grade: '고3', level: '중상', enrollDate: '2023-03-15', status: '재원중', parentContact: '010-7890-1234' },
-  { id: 8, name: '장수빈', grade: '고1', level: '하', enrollDate: '2024-02-01', status: '재원중', parentContact: '010-8901-2345' },
-  { id: 9, name: '임현우', grade: '고3', level: '중', enrollDate: '2023-06-18', status: '퇴원', parentContact: '010-9012-3456' },
-  { id: 10, name: '한지민', grade: '고2', level: '상', enrollDate: '2023-09-30', status: '재원중', parentContact: '010-0123-4567' },
-];
+import { auth, db } from '@/lib/supabase';
 
 // 관리자 인증 상태 확인 커스텀 훅
 const useAdminAuth = () => {
@@ -26,13 +13,20 @@ const useAdminAuth = () => {
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
-      setIsAuthenticated(isLoggedIn);
-      setIsLoading(false);
-
-      if (!isLoggedIn) {
+    const checkAuth = async () => {
+      try {
+        const { session } = await auth.getSession();
+        setIsAuthenticated(!!session);
+        
+        if (!session) {
+          router.push('/admin/login');
+        }
+      } catch (err) {
+        console.error('인증 확인 오류:', err);
+        setIsAuthenticated(false);
         router.push('/admin/login');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -44,7 +38,7 @@ const useAdminAuth = () => {
 
 export default function StudentsPage() {
   const { isAuthenticated, isLoading } = useAdminAuth();
-  const [students, setStudents] = useState(initialStudents);
+  const [students, setStudents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [gradeFilter, setGradeFilter] = useState('all');
@@ -53,12 +47,42 @@ export default function StudentsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [loadingData, setLoadingData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // 데이터 로드
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchStudents = async () => {
+      setLoadingData(true);
+      try {
+        const { data, error } = await db.getStudents();
+        if (error) throw error;
+        
+        if (data) {
+          setStudents(data);
+        }
+      } catch (err) {
+        console.error('학생 데이터 가져오기 오류:', err);
+        setError('학생 데이터를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchStudents();
+  }, [isAuthenticated]);
+
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    localStorage.removeItem('adminLoggedIn');
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+    }
   };
 
   // 사이드바 토글
@@ -113,34 +137,45 @@ export default function StudentsPage() {
         parentContact: ''
       }
     );
+    const [saving, setSaving] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
       setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      setSaving(true);
       
-      if (editingStudent) {
-        // 학생 정보 수정
-        setStudents(prev => 
-          prev.map(student => 
-            student.id === editingStudent.id ? { ...formData, id: student.id } : student
-          )
-        );
-      } else {
-        // 새 학생 추가
-        setStudents(prev => [
-          ...prev,
-          {
-            ...formData,
-            id: Math.max(...prev.map(s => s.id)) + 1
+      try {
+        if (editingStudent) {
+          // 학생 정보 수정
+          const { data, error } = await db.updateStudent(editingStudent.id, formData);
+          if (error) throw error;
+          
+          setStudents(prev => 
+            prev.map(student => 
+              student.id === editingStudent.id ? data[0] : student
+            )
+          );
+        } else {
+          // 새 학생 추가
+          const { data, error } = await db.addStudent(formData);
+          if (error) throw error;
+          
+          if (data) {
+            setStudents(prev => [...prev, data[0]]);
           }
-        ]);
+        }
+        
+        onClose();
+      } catch (err) {
+        console.error('학생 저장 오류:', err);
+        alert('학생 정보 저장 중 오류가 발생했습니다.');
+      } finally {
+        setSaving(false);
       }
-      
-      onClose();
     };
 
     return (
@@ -261,16 +296,29 @@ export default function StudentsPage() {
   };
 
   // 학생 삭제 핸들러
-  const handleDeleteStudent = (id: number) => {
+  const handleDeleteStudent = async (id: number) => {
     if (window.confirm('정말로 이 학생을 삭제하시겠습니까?')) {
-      setStudents(prev => prev.filter(student => student.id !== id));
+      try {
+        const { error } = await db.deleteStudent(id);
+        if (error) throw error;
+        
+        setStudents(prev => prev.filter(student => student.id !== id));
+      } catch (err) {
+        console.error('학생 삭제 오류:', err);
+        alert('학생 삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
-  // 학생 편집 핸들러
+  // 학생 수정 모달 열기
   const handleEditStudent = (student: any) => {
     setEditingStudent(student);
     setShowAddModal(true);
+  };
+  
+  // 학생 상세 페이지로 이동
+  const handleViewStudentDetail = (id: number) => {
+    router.push(`/admin/students/${id}`);
   };
 
   // 로딩 상태 표시
@@ -513,16 +561,22 @@ export default function StudentsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
-                          onClick={() => handleEditStudent(student)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                          onClick={() => handleViewStudentDetail(student.id)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
                         >
-                          <FaEdit />
+                          상세보기
+                        </button>
+                        <button
+                          onClick={() => handleEditStudent(student)}
+                          className="text-green-600 hover:text-green-900 mr-3"
+                        >
+                          수정
                         </button>
                         <button
                           onClick={() => handleDeleteStudent(student.id)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          <FaTrash />
+                          삭제
                         </button>
                       </td>
                     </tr>

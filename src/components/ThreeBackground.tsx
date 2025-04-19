@@ -1,27 +1,35 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
 const ThreeBackground = () => {
   const mountRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // ThreeJS 요소 생성
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    
     if (!mountRef.current) return;
     
-    // 렌더러 설정
+    // Scene 설정
+    const scene = new THREE.Scene();
+    
+    // Camera 설정
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.z = 5;
+    
+    // Renderer 설정
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
     
-    // 파티클 생성
+    // 파티클 설정
     const particlesGeometry = new THREE.BufferGeometry();
-    const particlesCount = 2000;
+    const particlesCount = 1000;
     
     const posArray = new Float32Array(particlesCount * 3);
     
@@ -31,32 +39,22 @@ const ThreeBackground = () => {
     
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
     
-    // 파티클 마테리얼
     const particlesMaterial = new THREE.PointsMaterial({
       size: 0.02,
-      color: '#ffffff',
+      color: 0x88ccff,
       transparent: true,
-      opacity: 0.3
+      opacity: 0.5,
     });
     
-    // 파티클 메시
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
     
-    // 카메라 위치 설정
-    camera.position.z = 3;
-    
-    // 애니메이션 루프
-    const clock = new THREE.Clock();
-    
+    // 애니메이션
     const animate = () => {
-      const elapsedTime = clock.getElapsedTime();
-      
-      // 파티클 회전
-      particlesMesh.rotation.y = elapsedTime * 0.05;
-      
-      renderer.render(scene, camera);
       requestAnimationFrame(animate);
+      particlesMesh.rotation.x += 0.0003;
+      particlesMesh.rotation.y += 0.0003;
+      renderer.render(scene, camera);
     };
     
     animate();
@@ -70,11 +68,14 @@ const ThreeBackground = () => {
     
     window.addEventListener('resize', handleResize);
     
+    // 마운트 참조 복사
+    const currentMount = mountRef.current;
+    
     // Clean up
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (mountRef.current) {
-        mountRef.current.removeChild(renderer.domElement);
+      if (currentMount) {
+        currentMount.removeChild(renderer.domElement);
       }
       particlesGeometry.dispose();
       particlesMaterial.dispose();

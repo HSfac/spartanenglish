@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { FaArrowRight, FaPhoneAlt, FaBook, FaChartLine, FaQuoteRight } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
+import DiagnosisModal from './DiagnosisTest/DiagnosisModal';
 
 // ThreeJS를 클라이언트 사이드에서만 로드
-const ThreeBackground = dynamic(() => import('../components/ThreeBackground'), { 
+const ThreeBackground = dynamic(() => import('./ThreeBackground'), { 
   ssr: false,
   loading: () => <div className="absolute inset-0 z-0" />
 });
@@ -197,6 +198,8 @@ export default function CtaSection() {
     tap: { scale: 0.95 }
   };
 
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+
   return (
     <section className="relative py-20 md:py-32 overflow-hidden" ref={ref}>
       {/* ThreeJS 배경 */}
@@ -222,9 +225,9 @@ export default function CtaSection() {
             className="text-center mb-10"
           >
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-              Spartan과 함께 
+              우리 아이의 
               <span className="relative inline-block mx-2">
-                변화의 
+                영어 실력 향상,
                 <motion.span 
                   initial={{ width: '0%' }}
                   animate={inView ? { width: '100%' } : { width: '0%' }}
@@ -232,7 +235,7 @@ export default function CtaSection() {
                   className="absolute -bottom-2 left-0 h-1 bg-accent rounded-full"
                 ></motion.span>
               </span>
-              첫걸음을 시작하세요
+              지금 시작하세요
             </h2>
             <motion.p 
               initial={{ opacity: 0 }}
@@ -240,8 +243,8 @@ export default function CtaSection() {
               transition={{ duration: 0.7, delay: 0.3 }}
               className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed"
             >
-              원장이 직접 가르치는 맞춤형 수업으로 영어 실력을 향상시키세요.<br />
-              지금 바로 상담 신청하고 무료 진단 테스트를 받아보세요.
+              <span className="font-bold text-accent">무료 진단테스트</span>와 <span className="font-bold text-accent">맞춤형 학습계획</span>으로 아이의 영어 성적 향상을 경험하세요.<br />
+              원장이 직접 책임지는 스파르탄 영어로 1등급 달성의 첫걸음을 시작하세요.
             </motion.p>
           </motion.div>
           
@@ -271,11 +274,12 @@ export default function CtaSection() {
             <TestimonialSlider />
           </motion.div>
           
+          {/* 행동 유도 버튼 */}
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6"
+            initial={{ opacity: 0, y: 30 }}
+            animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+            transition={{ duration: 0.7, delay: 0.5 }}
+            className="flex flex-col md:flex-row justify-center gap-6 mt-12"
           >
             <motion.div 
               variants={buttonVariants}
@@ -285,14 +289,14 @@ export default function CtaSection() {
             >
               <Link
                 href="/consult"
-                className="group relative inline-flex items-center justify-center px-8 py-4 bg-accent text-white font-medium rounded-xl overflow-hidden shadow-lg hover:shadow-accent/30 transition-shadow duration-300"
+                className="group relative inline-flex items-center justify-center px-8 py-4 bg-accent text-white font-medium rounded-xl overflow-hidden hover:bg-accent/90 transition-colors duration-300 shadow-lg"
               >
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-br from-accent to-accent/80 transition-all duration-300"></span>
-                <span className="absolute bottom-0 right-0 block w-64 h-64 mb-32 mr-4 transition-all duration-500 origin-bottom-left transform rotate-45 translate-x-24 bg-white/10 opacity-30 group-hover:rotate-90 ease"></span>
+                <span className="absolute -inset-x-1 -top-2 -bottom-2 overflow-hidden opacity-0 group-hover:opacity-20">
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/40 to-white/0"></span>
+                </span>
                 <span className="relative flex items-center">
-                  <FaPhoneAlt className="mr-2" />
-                  지금 원장 상담 신청하기
-                  <FaArrowRight className="ml-2 text-sm opacity-70 group-hover:translate-x-1 transition-transform" />
+                  상담 신청하기
+                  <FaArrowRight className="ml-2" />
                 </span>
               </Link>
             </motion.div>
@@ -303,17 +307,23 @@ export default function CtaSection() {
               whileHover="hover"
               whileTap="tap"
             >
-              <Link
-                href="/about"
-                className="group relative inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-medium border border-white/20 rounded-xl overflow-hidden hover:bg-white/20 transition-colors duration-300"
+              <button
+                onClick={() => setIsTestModalOpen(true)}
+                className="group relative inline-flex items-center justify-center px-8 py-4 bg-white text-primary font-medium border border-white/20 rounded-xl overflow-hidden hover:bg-white/20 hover:text-white transition-colors duration-300"
               >
                 <span className="relative flex items-center">
-                  <FaBook className="mr-2" />
-                  더 알아보기
+                  <FaChartLine className="mr-2" />
+                  영어 진단 테스트 풀기
                 </span>
-              </Link>
+              </button>
             </motion.div>
           </motion.div>
+          
+          {/* 진단 테스트 모달 */}
+          <DiagnosisModal 
+            isOpen={isTestModalOpen} 
+            onClose={() => setIsTestModalOpen(false)} 
+          />
           
           {/* 부가 정보 카드 */}
           <motion.div 

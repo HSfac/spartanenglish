@@ -5,6 +5,8 @@ import { FaQuoteLeft, FaStar, FaChartLine, FaGraduationCap } from 'react-icons/f
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useState } from 'react';
+import Link from 'next/link';
+import DiagnosisModal from './DiagnosisTest/DiagnosisModal';
 
 type TestimonialCardProps = {
   name: string;
@@ -112,25 +114,26 @@ export default function TestimonialsSection() {
   });
   
   const [activeTab, setActiveTab] = useState(0);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   
   const testimonials = [
     {
-      name: "김OO",
-      grade: "고3 수험생",
+      name: "김OO 학부모님",
+      grade: "고3 수험생 학부모",
       result: "3등급 → 1등급",
-      content: "원장님께서 직접 수업을 진행해주시고, 제 약점을 정확히 짚어주셔서 효율적으로 공부할 수 있었습니다. 특히 지문 독해 전략이 큰 도움이 되었습니다."
+      content: "영어 성적이 항상 고민이었는데, 원장님께서 우리 아이 특성에 맞는 맞춤형 전략을 제시해주셨어요. 아이의 영어 성적이 3등급에서 1등급으로 올랐고, 무엇보다 아이가 영어에 자신감을 가지게 되었습니다."
     },
     {
-      name: "이OO",
-      grade: "고2 학생",
-      result: "모의고사 70점 → 92점",
-      content: "문제 풀이 전략과 시간 관리 방법을 배우면서 효율적으로 공부하는 방법을 알게 되었어요. 불안감도 줄고 자신감이 생겼습니다."
+      name: "이OO 학부모님",
+      grade: "고2 학생 학부모",
+      result: "70점 → 92점",
+      content: "다른 학원에서는 느껴보지 못한 원장님의 책임감이 인상적이었습니다. 매주 자녀의 학습 상황을 상세히 알려주시고, 꾸준한 관리로 모의고사 점수가 크게 향상되었어요. 아이도 영어 수업을 즐겁게 다닙니다."
     },
     {
-      name: "박OO 학부모",
+      name: "박OO 학부모님",
       grade: "고3 학생 학부모",
-      result: "아이의 성적 향상",
-      content: "원장님이 직접 가르치신다는 점이 가장 마음에 들었습니다. 아이에게 맞는 맞춤형 교육 방식이 아이의 성적 향상으로 이어졌습니다."
+      result: "4등급 → 2등급",
+      content: "원장님이 직접 가르치신다는 점이 가장 큰 장점입니다. 우리 아이의 취약점을 정확히 파악하고 맞춤형 학습으로 단기간에 영어 성적이 2등급이나 향상되었습니다. 학부모로서 정말 만족스러운 결과입니다."
     }
   ];
   
@@ -158,13 +161,13 @@ export default function TestimonialsSection() {
           className="text-center mb-12"
         >
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-primary mb-4">
-            3등급에서 <span className="text-accent relative">
-              1등급
+            우리 아이도 <span className="text-accent relative">
+              영어 성적 상승
               <span className="absolute -inset-1 bg-accent/10 -z-10 blur-sm rounded-lg"></span>
-            </span>으로, 바뀐 건 전략입니다
+            </span>을 경험하실 수 있습니다
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            실제 학생들의 성적 변화와 생생한 후기를 확인하세요.
+            실제 학부모님들의 생생한 후기와 아이들의 눈에 띄는 성적 변화를 확인하세요.
           </p>
         </motion.div>
 
@@ -208,15 +211,36 @@ export default function TestimonialsSection() {
             transition={{ duration: 0.7, delay: 0.6 }}
             className="mt-12 bg-primary/5 p-6 rounded-xl text-center"
           >
-            <p className="text-primary mb-4">학생들이 말하는 만족도</p>
+            <p className="text-primary mb-4">학부모님들이 평가한 만족도</p>
             <div className="flex justify-center items-center gap-1">
               {[1, 2, 3, 4, 5].map((_, i) => (
                 <FaStar key={i} className="text-accent text-2xl" />
               ))}
             </div>
             <p className="font-bold text-2xl mt-2">4.9/5.0</p>
+            
+            <div className="mt-6 flex flex-col sm:flex-row justify-center gap-4">
+              <Link
+                href="/consult"
+                className="inline-flex items-center justify-center bg-accent text-white font-medium px-6 py-3 rounded-lg hover:bg-accent/90 transition-all duration-300"
+              >
+                무료 상담 신청하기
+              </Link>
+              <button
+                onClick={() => setIsTestModalOpen(true)}
+                className="inline-flex items-center justify-center bg-white border border-primary text-primary font-medium px-6 py-3 rounded-lg hover:bg-primary hover:text-white transition-all duration-300"
+              >
+                영어 진단 테스트 풀기
+              </button>
+            </div>
           </motion.div>
         </div>
+        
+        {/* 진단 테스트 모달 */}
+        <DiagnosisModal 
+          isOpen={isTestModalOpen} 
+          onClose={() => setIsTestModalOpen(false)} 
+        />
         
         {/* 성적 변화 탭 */}
         <div className={`transition-all duration-300 ${activeTab === 1 ? 'block' : 'hidden'}`}>
